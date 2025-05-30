@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Xbox Controller Battery Indicator
+Comment=Shows Xbox controller battery level in the system tray
+Exec=/usr/bin/xbox-controller-battery-linux
+Icon=xbox-controller-battery-linux
+Terminal=false
+Type=Application
+Categories=Utility;System;

@@ -1,0 +1,7 @@
+Package: xbox-controller-battery-linux
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: Hai Nguyen <nvhai245@gmail.com>
+Description: Xbox Controller battery status tray indicator for Linux.
