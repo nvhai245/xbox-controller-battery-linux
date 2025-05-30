@@ -158,7 +158,7 @@ func updateTrayTooltip(batteryLevel string, charging bool, iconFiles map[string]
 		status = "high" // icon full = icon high
 	}
 
-	tooltip := fmt.Sprintf("Xbox Controller Battery: %s", batteryLevel)
+	tooltip := fmt.Sprintf("Battery Level: %s", batteryLevel)
 	if charging {
 		tooltip += " (Charging)"
 	}
@@ -197,7 +197,7 @@ func notifyLowBattery(level string) {
 func refreshIndicator(lastNotifiedLevel *string) {
 	devicePath, err := findXboxBatteryDevice()
 	if err != nil {
-		systray.SetTitle("Xbox Controller Battery: Disconnected")
+		systray.SetTitle("Controller Disconnected")
 		if icon, ok := iconFiles["disconnected"]; ok {
 			systray.SetIcon(icon)
 		} else {
