@@ -108,7 +108,8 @@ func detectDarkMode() bool {
 }
 
 func loadIcons(theme string) map[string][]byte {
-	prefix := filepath.Join("icons", theme)
+	iconPath := "/usr/share/xbox-controller-battery-linux/icons"
+	prefix := filepath.Join(iconPath, theme)
 	icons := map[string][]byte{}
 	files := []string{
 		"battery_high.png",
