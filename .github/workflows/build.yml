@@ -21,13 +21,13 @@ jobs:
         with:
           go-version: 1.21
 
-      # - name: Cache Go modules
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: ~/.cache/go-build
-      #     key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-go-
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Build the app
         run: go build -o xbox-controller-battery-linux .
@@ -51,7 +51,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: built-binary
-          path: xbox-controller-battery-linux
+          path: .
 
       - name: Set up Go
         uses: actions/setup-go@v4
