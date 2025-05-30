@@ -1,40 +1,30 @@
 
-# Xbox Controller Battery for Linux
+# Xbox Controller Battery Indicator for Linux
 
 A simple system tray app that displays the battery level of your Xbox controller on Linux.
 
 ---
 
-## 🚀 Installation
+## 🛠️ Installation
 
-### 📦 Download Prebuilt Packages
+### Arch Linux
 
-Go to the **[Releases](https://github.com/nvhai245/xbox-controller-battery-linux/releases)** page and download the latest version for your system:
-
-- **Debian/Ubuntu:** `xbox-controller-battery-linux_*.deb`
-- **Arch Linux:** `xbox-controller-battery-linux-*.pkg.tar.zst`
-
----
-
-### 🐧 Debian / Ubuntu
-
-1. Download the `.deb` package from the [Releases](https://github.com/nvhai245/xbox-controller-battery-linux/releases) page.  
-2. Install it using:
-
-```bash
-sudo dpkg -i xbox-controller-battery-linux_*.deb
-sudo apt-get install -f  # fix any missing dependencies
-```
-
----
-
-### 🅰️ Arch Linux
-
-1. Download the `.pkg.tar.zst` package.  
+1. Download the `.pkg.tar.zst` package from the [Releases](https://github.com/nvhai245/xbox-controller-battery-linux/releases) page.  
 2. Install it using:
 
 ```bash
 sudo pacman -U xbox-controller-battery-linux-*.pkg.tar.zst
+```
+
+---
+
+### Debian / Ubuntu
+
+1. Download the `.deb` package  
+2. Install it using:
+
+```bash
+sudo dpkg -i xbox-controller-battery-linux_*.deb
 ```
 
 ---
@@ -47,13 +37,19 @@ After installation, launch the app from your application menu or run:
 xbox-controller-battery-linux
 ```
 
-It will show in the system tray and display the battery level of your Xbox controller.
-
 ---
+🔄 Auto-start on Login
+
+To make the app start automatically after login:
+
+Create a .desktop file in your autostart directory:
+
+```
+mkdir -p ~/.config/autostart
+cp /usr/share/applications/xbox-controller-battery-linux.desktop ~/.config/autostart/
+```
 
 ## 🛠️ Build From Source
-
-If you want to build the app yourself:
 
 ```bash
 git clone https://github.com/nvhai245/xbox-controller-battery-linux
