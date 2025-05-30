@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,9 +10,51 @@ import (
 	"time"
 
 	"fyne.io/systray"
+	"github.com/gen2brain/beeep"
 )
 
-const powerSupplyPath = "/sys/class/power_supply/"
+const (
+	powerSupplyPath = "/sys/class/power_supply/"
+	iconPath        = "/usr/share/xbox-controller-battery-linux/icons"
+	configDir       = ".config/xbox-controller-battery-linux"
+	configFileName  = "battery.conf"
+)
+
+var theme string
+
+func loadThemeFromConfig() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println("Error getting home directory:", err)
+		return "", err
+	}
+	file, err := os.Open(filepath.Join(homeDir, configDir, configFileName))
+	if err != nil {
+		err = fmt.Errorf("error opening file: %v", err)
+		return "", err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			if key == "theme" {
+				value := strings.TrimSpace(parts[1])
+				return value, nil
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		err = fmt.Errorf("error reading config file: %v", err)
+		return "", err
+	}
+
+	return "", errors.New("theme is not set")
+}
 
 // Read the battery level and status from uevent
 func readBatteryInfo(devicePath string) (string, bool, error) {
@@ -83,32 +126,7 @@ func findXboxBatteryDevice() (string, error) {
 	return "", fmt.Errorf("no Xbox controller device found")
 }
 
-func detectDarkMode() bool {
-	configPaths := []string{
-		filepath.Join(os.Getenv("HOME"), ".config", "gtk-4.0", "settings.ini"),
-		filepath.Join(os.Getenv("HOME"), ".config", "gtk-3.0", "settings.ini"),
-	}
-
-	for _, path := range configPaths {
-		file, err := os.Open(path)
-		if err != nil {
-			continue
-		}
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.Contains(line, "gtk-application-prefer-dark-theme") && strings.HasSuffix(line, "=1") {
-				file.Close()
-				return true
-			}
-		}
-		file.Close()
-	}
-	return false
-}
-
 func loadIcons(theme string) map[string][]byte {
-	iconPath := "/usr/share/xbox-controller-battery-linux/icons"
 	prefix := filepath.Join(iconPath, theme)
 	icons := map[string][]byte{}
 	files := []string{
@@ -157,38 +175,81 @@ func updateTrayTooltip(batteryLevel string, charging bool, iconFiles map[string]
 	}
 }
 
-func onReady() {
-	theme := "light"
-	if detectDarkMode() {
-		theme = "dark"
+func notifyLowBattery(level string) {
+	var (
+		message string
+		appIcon string
+	)
+	switch level {
+	case "low":
+		message = fmt.Sprintf("Battery is %s. Please charge soon.", level)
+		appIcon = fmt.Sprintf("%s/%s/%s", iconPath, theme, "battery_low.png")
+	case "critical":
+		message = fmt.Sprintf("Battery is %s! Your controller will turn off soon!", level)
+		appIcon = fmt.Sprintf("%s/%s/%s", iconPath, theme, "battery_critical.png")
 	}
-	iconFiles := loadIcons(theme)
+	err := beeep.Notify("", message, appIcon)
+	if err != nil {
+		fmt.Println("Notification error:", err)
+	}
+}
+
+func refreshIndicator(lastNotifiedLevel *string) {
+	devicePath, err := findXboxBatteryDevice()
+	if err != nil {
+		systray.SetTitle("Xbox Controller Battery: Disconnected")
+		if icon, ok := iconFiles["disconnected"]; ok {
+			systray.SetIcon(icon)
+		} else {
+			systray.SetIcon(iconFiles["unknown"])
+		}
+	} else {
+		level, charging, err := readBatteryInfo(devicePath)
+		if err != nil {
+			fmt.Println("Error reading battery info:", err)
+			updateTrayTooltip("unknown", false, iconFiles)
+		} else {
+			updateTrayTooltip(level, charging, iconFiles)
+			// send notification for low battery
+			if !charging {
+				currentLevel := strings.ToLower(level)
+				if lastNotifiedLevel != nil {
+					if (currentLevel == "low" || currentLevel == "critical") && currentLevel != *lastNotifiedLevel {
+						notifyLowBattery(currentLevel)
+						*lastNotifiedLevel = currentLevel
+					}
+					if currentLevel != "low" && currentLevel != "critical" {
+						*lastNotifiedLevel = ""
+					}
+				}
+			}
+		}
+	}
+}
+
+var iconFiles map[string][]byte
+
+func onReady() {
+	t, err := loadThemeFromConfig()
+	if err != nil {
+		theme = "dark"
+		fmt.Println(err)
+		fmt.Println("using default theme: dark")
+	} else {
+		theme = t
+	}
+	iconFiles = loadIcons(theme)
 	systray.SetTitle("Xbox Controller Battery")
 
-	// Create menu for Exit
+	// Create menu entries
+	mChangeTheme := systray.AddMenuItem("Change theme", "Change the icon theme")
 	mExit := systray.AddMenuItem("Exit", "Exit the application")
 
 	// Main loop
 	go func() {
+		lastNotifiedLevel := new(string)
 		for {
-			devicePath, err := findXboxBatteryDevice()
-			if err != nil {
-				fmt.Println("Xbox controller not found.")
-				systray.SetTitle("Xbox Controller Battery: Disconnected")
-				if icon, ok := iconFiles["disconnected"]; ok {
-					systray.SetIcon(icon)
-				} else {
-					systray.SetIcon(iconFiles["unknown"])
-				}
-			} else {
-				level, charging, err := readBatteryInfo(devicePath)
-				if err != nil {
-					fmt.Println("Error reading battery info:", err)
-					updateTrayTooltip("unknown", false, iconFiles)
-				} else {
-					updateTrayTooltip(level, charging, iconFiles)
-				}
-			}
+			refreshIndicator(lastNotifiedLevel)
 			time.Sleep(5 * time.Second)
 		}
 	}()
@@ -198,6 +259,80 @@ func onReady() {
 			return
 		}
 	}()
+	go func() {
+		for range mChangeTheme.ClickedCh {
+			switch theme {
+			case "dark":
+				theme = "light"
+			case "light":
+				theme = "dark"
+			default:
+			}
+			iconFiles = loadIcons(theme)
+			refreshIndicator(nil)
+			setThemeToConfig(theme)
+		}
+	}()
+}
+
+func setThemeToConfig(newTheme string) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println("Error getting home directory:", err)
+		return
+	}
+
+	err = os.MkdirAll(filepath.Join(homeDir, configDir), 0755) // Create the directory with appropriate permissions
+	if err != nil {
+		fmt.Println("Error creating directory:", err)
+		return
+	}
+
+	file, err := os.OpenFile(filepath.Join(homeDir, configDir, configFileName), os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return
+	}
+	defer file.Close()
+
+	config := make(map[string]string)
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+			config[key] = value
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Println("Error reading file:", err)
+		return
+	}
+
+	config["theme"] = newTheme
+
+	file, err = os.Create(filepath.Join(homeDir, configDir, configFileName))
+	if err != nil {
+		fmt.Println("Error creating config file:", err)
+		return
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	for key, value := range config {
+		_, err := fmt.Fprintf(writer, "%s=%s\n", key, value)
+		if err != nil {
+			fmt.Println("Error writing to config file:", err)
+			return
+		}
+	}
+	writer.Flush()
+
+	fmt.Println("Updated config file successfully.")
 }
 
 func main() {
