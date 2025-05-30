@@ -1,0 +1,108 @@
+name: Build and Package
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.21
+
+      # - name: Cache Go modules
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: ~/.cache/go-build
+      #     key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-go-
+
+      - name: Build the app
+        run: go build -o xbox-controller-battery-linux .
+
+      - name: Upload built binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-binary
+          path: xbox-controller-battery-linux
+
+  package:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download built binary
+        uses: actions/download-artifact@v4
+        with:
+          name: built-binary
+          path: xbox-controller-battery-linux
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.21
+
+      - name: Install FPM (for DEB packaging)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby ruby-dev build-essential
+          sudo gem install --no-document fpm
+
+      - name: Package DEB
+        run: |
+          mkdir -p debian/usr/bin
+          mkdir -p debian/usr/share/applications
+          mkdir -p debian/usr/share/icons/hicolor/64x64/apps
+          cp xbox-controller-battery-linux debian/usr/bin/
+          cp xbox-controller-battery-linux.desktop debian/usr/share/applications/
+          cp icons/light/battery_high.png debian/usr/share/icons/hicolor/64x64/apps/xbox-controller-battery-linux.png
+          fpm -s dir -t deb -n xbox-controller-battery-linux -v 1.0.0 -C debian .
+
+      - name: Package PKG (Arch Linux)
+        run: |
+          docker run --rm -v "$PWD:/build" -w /build archlinux bash -c "
+            pacman -Sy --noconfirm base-devel go git rsync &&
+            useradd -m builder &&
+            chown -R builder /build &&
+            su builder -c '
+              cd /build &&
+              mkdir -p pkgbuild/src &&
+              rsync -av --exclude=pkgbuild ./ pkgbuild/src/ &&
+              cp PKGBUILD pkgbuild/ &&
+              cd pkgbuild &&
+              makepkg -fs --noconfirm
+            '
+          "
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: xbox-controller-battery-linux-packages
+          path: |
+            *.deb
+            pkgbuild/*.pkg.tar.zst
+
+      - name: Create GitHub Release and upload binaries
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            *.deb
+            pkgbuild/*.pkg.tar.zst
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
