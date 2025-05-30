@@ -74,7 +74,8 @@ jobs:
           mkdir -p debian/usr/share/icons/hicolor/64x64/apps
           cp xbox-controller-battery-linux debian/usr/bin/
           cp xbox-controller-battery-linux.desktop debian/usr/share/applications/
-          cp icons/light/battery_high.png debian/usr/share/icons/hicolor/64x64/apps/xbox-controller-battery-linux.png
+          cp xbox-controller-battery-linux.png debian/usr/share/icons/hicolor/64x64/apps/xbox-controller-battery-linux.png
+          cp -r icons debian/usr/share/icons/hicolor/64x64/apps/
           fpm -s dir -t deb -n xbox-controller-battery-linux -v 1.0.0 -C debian .
 
       - name: Package PKG (Arch Linux)

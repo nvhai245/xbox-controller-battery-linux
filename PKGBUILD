@@ -16,5 +16,6 @@ build() {
 package() {
 	install -Dm755 "$srcdir/xbox-controller-battery-linux" "$pkgdir/usr/bin/xbox-controller-battery-linux"
 	install -Dm644 "$srcdir/xbox-controller-battery-linux.desktop" "$pkgdir/usr/share/applications/xbox-controller-battery-linux.desktop"
-	install -Dm644 "$srcdir/icons/light/battery_high.png" "$pkgdir/usr/share/icons/hicolor/64x64/apps/xbox-controller-battery-linux.png"
+	install -Dm644 "$srcdir/xbox-controller-battery-linux.png" "$pkgdir/usr/share/icons/hicolor/64x64/apps/xbox-controller-battery-linux.png"
+	cp -r "$srcdir/icons" "$pkgdir/usr/share/icons/hicolor/64x64/apps/icons"
 }
