@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"fyne.io/systray"
@@ -335,6 +336,25 @@ func setThemeToConfig(newTheme string) {
 	fmt.Println("Updated config file successfully.")
 }
 
+func acquireLockOrExit(lockPath string) *os.File {
+	lockFile, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		fmt.Println("Failed to open lock file:", err)
+		os.Exit(1)
+	}
+
+	err = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+	if err != nil {
+		fmt.Println("Another instance is already running.")
+		os.Exit(0)
+	}
+
+	return lockFile // keep it open to hold the lock
+}
+
 func main() {
+	lockFile := acquireLockOrExit("/tmp/xbox-controller-battery-linux.lock")
+	defer lockFile.Close()
+
 	systray.Run(onReady, func() {})
 }
