@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -21,18 +22,27 @@ const (
 	configFileName  = "battery.conf"
 )
 
-var theme string
+type config struct {
+	theme        string
+	notification bool
+}
 
-func loadThemeFromConfig() (string, error) {
+// Default config
+var appConf = &config{
+	theme:        "dark",
+	notification: true,
+}
+
+func loadConfig() error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Println("Error getting home directory:", err)
-		return "", err
+		return err
 	}
 	file, err := os.Open(filepath.Join(homeDir, configDir, configFileName))
 	if err != nil {
 		err = fmt.Errorf("error opening file: %v", err)
-		return "", err
+		return err
 	}
 	defer file.Close()
 
@@ -42,19 +52,25 @@ func loadThemeFromConfig() (string, error) {
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) == 2 {
 			key := strings.TrimSpace(parts[0])
-			if key == "theme" {
-				value := strings.TrimSpace(parts[1])
-				return value, nil
+			switch key {
+			case "theme":
+				appConf.theme = strings.TrimSpace(parts[1])
+			case "notification":
+				enabled, err := strconv.ParseBool(strings.TrimSpace(parts[1]))
+				if err != nil || enabled {
+					return err
+				}
+				appConf.notification = enabled
 			}
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
 		err = fmt.Errorf("error reading config file: %v", err)
-		return "", err
+		return err
 	}
 
-	return "", errors.New("theme is not set")
+	return errors.New("config is not set")
 }
 
 // Read the battery level and status from uevent
@@ -184,15 +200,34 @@ func notifyLowBattery(level string) {
 	switch level {
 	case "low":
 		message = fmt.Sprintf("Battery is %s. Please charge soon.", level)
-		appIcon = fmt.Sprintf("%s/%s/%s", iconPath, theme, "battery_low.png")
+		appIcon = fmt.Sprintf("%s/%s/%s", iconPath, appConf.theme, "battery_low.png")
 	case "critical":
 		message = fmt.Sprintf("Battery is %s! Your controller will turn off soon!", level)
-		appIcon = fmt.Sprintf("%s/%s/%s", iconPath, theme, "battery_critical.png")
+		appIcon = fmt.Sprintf("%s/%s/%s", iconPath, appConf.theme, "battery_critical.png")
 	}
 	err := beeep.Notify("", message, appIcon)
 	if err != nil {
 		fmt.Println("Notification error:", err)
 	}
+}
+
+func notifyNotificationToggle(menuItem *systray.MenuItem, isOn bool) {
+	var (
+		message  string
+		newTitle string
+	)
+	if isOn {
+		message = "Alert is on"
+		newTitle = "Turn off notification"
+	} else {
+		message = "Alert is off"
+		newTitle = "Turn on notification"
+	}
+	err := beeep.Notify("", message, "")
+	if err != nil {
+		fmt.Println("Notification error:", err)
+	}
+	menuItem.SetTitle(newTitle)
 }
 
 func refreshIndicator(lastNotifiedLevel *string) {
@@ -231,19 +266,23 @@ func refreshIndicator(lastNotifiedLevel *string) {
 var iconFiles map[string][]byte
 
 func onReady() {
-	t, err := loadThemeFromConfig()
+	err := loadConfig()
 	if err != nil {
-		theme = "dark"
 		fmt.Println(err)
 		fmt.Println("using default theme: dark")
-	} else {
-		theme = t
 	}
-	iconFiles = loadIcons(theme)
+	iconFiles = loadIcons(appConf.theme)
 	systray.SetTitle("Xbox Controller Battery")
 
 	// Create menu entries
 	mChangeTheme := systray.AddMenuItem("Change theme", "Change the icon theme")
+	var notificationMenuTitle string
+	if appConf.notification {
+		notificationMenuTitle = "Turn off notification"
+	} else {
+		notificationMenuTitle = "Turn on notification"
+	}
+	mToggleNotification := systray.AddMenuItem(notificationMenuTitle, "Toggle the app notification")
 	mExit := systray.AddMenuItem("Exit", "Exit the application")
 
 	// Main loop
@@ -262,21 +301,29 @@ func onReady() {
 	}()
 	go func() {
 		for range mChangeTheme.ClickedCh {
-			switch theme {
+			switch appConf.theme {
 			case "dark":
-				theme = "light"
+				appConf.theme = "light"
 			case "light":
-				theme = "dark"
+				appConf.theme = "dark"
 			default:
+				continue
 			}
-			iconFiles = loadIcons(theme)
+			iconFiles = loadIcons(appConf.theme)
 			refreshIndicator(nil)
-			setThemeToConfig(theme)
+			setConfig()
+		}
+	}()
+	go func() {
+		for range mToggleNotification.ClickedCh {
+			appConf.notification = !appConf.notification
+			notifyNotificationToggle(mToggleNotification, appConf.notification)
+			setConfig()
 		}
 	}()
 }
 
-func setThemeToConfig(newTheme string) {
+func setConfig() {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Println("Error getting home directory:", err)
@@ -314,7 +361,8 @@ func setThemeToConfig(newTheme string) {
 		return
 	}
 
-	config["theme"] = newTheme
+	config["theme"] = appConf.theme
+	config["notification"] = strconv.FormatBool(appConf.notification)
 
 	file, err = os.Create(filepath.Join(homeDir, configDir, configFileName))
 	if err != nil {
