@@ -24,7 +24,7 @@ sudo pacman -U xbox-controller-battery-linux-*.pkg.tar.zst
 
 ---
 
-### Debian / Ubuntu
+### Debian / Ubuntu / Linux Mint
 
 1. Download the `.deb` package  
 2. Install it using:

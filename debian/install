@@ -1,4 +1,4 @@
 xbox-controller-battery-linux usr/bin
 xbox-controller-battery-linux.desktop usr/share/applications
-icons usr/share/xbox-controller-battery-linux/
+icons usr/share/xbox-controller-battery-linux/icons
 xbox-controller-battery-linux.png usr/share/icons/hicolor/64x64/apps/xbox-controller-battery-linux.png
