@@ -72,8 +72,8 @@ jobs:
           mkdir -p debian/usr/bin
           mkdir -p debian/usr/share/applications
           mkdir -p debian/usr/share/icons/hicolor/64x64/apps
-          cp xbox-controller-battery-linux debian/usr/bin/
-          cp xbox-controller-battery-linux.desktop debian/usr/share/applications/
+          install -Dm755 xbox-controller-battery-linux debian/usr/bin/xbox-controller-battery-linux
+          install -Dm644 xbox-controller-battery-linux.desktop debian/usr/share/applications/xbox-controller-battery-linux.desktop
           cp xbox-controller-battery-linux.png debian/usr/share/icons/hicolor/64x64/apps/xbox-controller-battery-linux.png
           cp -r icons debian/usr/share/xbox-controller-battery-linux/
           fpm -s dir -t deb -n xbox-controller-battery-linux -v 1.0.0 -C debian .
