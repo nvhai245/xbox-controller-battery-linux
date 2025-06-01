@@ -3,7 +3,11 @@
 
 A simple system tray app that displays the battery level of your Xbox controller on Linux.
 
-![Image](images/battery.gif)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/battery-dark.gif">
+  <source media="(prefers-color-scheme: light)" srcset="images/battery-light.gif">
+  <img alt="Fallback image description" src="images/battery-dark.png">
+</picture>
 
 ---
 
