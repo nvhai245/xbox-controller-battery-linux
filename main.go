@@ -148,9 +148,9 @@ func loadIcons(theme string) map[string][]byte {
 	icons := map[string][]byte{}
 	files := []string{
 		"battery_high.png",
-		"battery_medium.png",
+		"battery_normal.png",
 		"battery_low.png",
-		"battery_critical.png",
+		"battery_empty.png",
 		"battery_charging.png",
 		"battery_unknown.png",
 		"battery_disconnected.png",
@@ -169,7 +169,7 @@ func loadIcons(theme string) map[string][]byte {
 }
 
 func updateTrayTooltip(batteryLevel string, charging bool, iconFiles map[string][]byte) {
-	// Show battery level (full, high, medium,...)
+	// Show battery level (full, high, normal,...)
 	status := strings.ToLower(batteryLevel)
 	if status == "full" {
 		status = "high" // icon full = icon high
@@ -199,11 +199,11 @@ func notifyLowBattery(level string) {
 	)
 	switch level {
 	case "low":
-		message = fmt.Sprintf("Battery is %s. Please charge soon.", level)
+		message = "Battery is low. Please charge soon."
 		appIcon = fmt.Sprintf("%s/%s/%s", iconPath, appConf.theme, "battery_low.png")
-	case "critical":
-		message = fmt.Sprintf("Battery is %s! Your controller will turn off soon!", level)
-		appIcon = fmt.Sprintf("%s/%s/%s", iconPath, appConf.theme, "battery_critical.png")
+	case "empty":
+		message = "Battery is almost empty! Your controller will turn off soon!"
+		appIcon = fmt.Sprintf("%s/%s/%s", iconPath, appConf.theme, "battery_empty.png")
 	}
 	err := beeep.Notify("", message, appIcon)
 	if err != nil {
@@ -250,11 +250,11 @@ func refreshIndicator(lastNotifiedLevel *string) {
 			if !charging {
 				currentLevel := strings.ToLower(level)
 				if lastNotifiedLevel != nil {
-					if (currentLevel == "low" || currentLevel == "critical") && currentLevel != *lastNotifiedLevel {
+					if (currentLevel == "low" || currentLevel == "empty") && currentLevel != *lastNotifiedLevel {
 						notifyLowBattery(currentLevel)
 						*lastNotifiedLevel = currentLevel
 					}
-					if currentLevel != "low" && currentLevel != "critical" {
+					if currentLevel != "low" && currentLevel != "empty" {
 						*lastNotifiedLevel = ""
 					}
 				}
