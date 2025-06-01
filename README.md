@@ -37,6 +37,15 @@ sudo dpkg -i xbox-controller-battery-linux_*.deb
 
 ---
 
+### Fedora / Nobara / Bazzite
+
+1. Download the latest .rpm package
+2. Install it using:
+
+```bash
+sudo dnf install ./xbox-controller-battery-linux-*.rpm
+```
+
 ## 🖥️ Run the App
 
 After installation, launch the app from your application menu or run:

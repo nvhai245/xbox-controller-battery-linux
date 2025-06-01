@@ -79,6 +79,18 @@ jobs:
           cp -r icons debian/usr/share/xbox-controller-battery-linux/
           fpm -s dir -t deb -n xbox-controller-battery-linux -v 1.0.0 -C debian .
 
+      - name: Package RPM (Fedora)
+        run: |
+          mkdir -p rpm/usr/bin
+          mkdir -p rpm/usr/share/applications
+          mkdir -p rpm/usr/share/icons/hicolor/64x64/apps
+          install -Dm755 xbox-controller-battery-linux rpm/usr/bin/xbox-controller-battery-linux
+          install -Dm644 xbox-controller-battery-linux.desktop rpm/usr/share/applications/xbox-controller-battery-linux.desktop
+          cp xbox-controller-battery-linux.png rpm/usr/share/icons/hicolor/64x64/apps/xbox-controller-battery-linux.png
+          mkdir -p rpm/usr/share/xbox-controller-battery-linux
+          cp -r icons rpm/usr/share/xbox-controller-battery-linux/
+          fpm -s dir -t rpm -n xbox-controller-battery-linux -v 1.0.0 -C rpm .
+
       - name: Package PKG (Arch Linux)
         run: |
           docker run --rm -v "$PWD:/build" -w /build archlinux bash -c "
@@ -101,6 +113,7 @@ jobs:
           name: xbox-controller-battery-linux-packages
           path: |
             *.deb
+            *.rpm
             pkgbuild/*.pkg.tar.zst
 
       - name: Create GitHub Release and upload binaries
@@ -108,6 +121,7 @@ jobs:
         with:
           files: |
             *.deb
+            *.rpm
             pkgbuild/*.pkg.tar.zst
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
