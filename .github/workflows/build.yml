@@ -122,6 +122,6 @@ jobs:
           files: |
             *.deb
             *.rpm
-            pkgbuild/*.pkg.tar.zst
+            pkgbuild/!(*-debug)*.pkg.tar.zst
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
