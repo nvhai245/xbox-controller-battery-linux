@@ -33,6 +33,8 @@ var appConf = &config{
 	notification: true,
 }
 
+var lastNotifiedLevel = new(string)
+
 func loadConfig() error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -140,6 +142,7 @@ func findXboxBatteryDevice() (string, error) {
 		file.Close()
 	}
 
+	lastNotifiedLevel = new(string)
 	return "", fmt.Errorf("no Xbox controller device found")
 }
 
@@ -230,7 +233,7 @@ func notifyNotificationToggle(menuItem *systray.MenuItem, isOn bool) {
 	menuItem.SetTitle(newTitle)
 }
 
-func refreshIndicator(lastNotifiedLevel *string) {
+func refreshIndicator(notifiedLevel *string) {
 	devicePath, err := findXboxBatteryDevice()
 	if err != nil {
 		systray.SetTitle("Controller Disconnected")
@@ -247,15 +250,15 @@ func refreshIndicator(lastNotifiedLevel *string) {
 		} else {
 			updateTrayTooltip(level, charging, iconFiles)
 			// send notification for low battery
-			if !charging {
+			if !charging && appConf.notification {
 				currentLevel := strings.ToLower(level)
-				if lastNotifiedLevel != nil {
-					if (currentLevel == "low" || currentLevel == "empty") && currentLevel != *lastNotifiedLevel {
+				if notifiedLevel != nil {
+					if (currentLevel == "low" || currentLevel == "empty") && currentLevel != *notifiedLevel {
 						notifyLowBattery(currentLevel)
-						*lastNotifiedLevel = currentLevel
+						*notifiedLevel = currentLevel
 					}
 					if currentLevel != "low" && currentLevel != "empty" {
-						*lastNotifiedLevel = ""
+						*notifiedLevel = ""
 					}
 				}
 			}
@@ -287,7 +290,6 @@ func onReady() {
 
 	// Main loop
 	go func() {
-		lastNotifiedLevel := new(string)
 		for {
 			refreshIndicator(lastNotifiedLevel)
 			time.Sleep(5 * time.Second)
