@@ -150,6 +150,7 @@ func loadIcons(theme string) map[string][]byte {
 	prefix := filepath.Join(iconPath, theme)
 	icons := map[string][]byte{}
 	files := []string{
+		"battery_full.png",
 		"battery_high.png",
 		"battery_normal.png",
 		"battery_low.png",
@@ -174,10 +175,6 @@ func loadIcons(theme string) map[string][]byte {
 func updateTrayTooltip(batteryLevel string, charging bool, iconFiles map[string][]byte) {
 	// Show battery level (full, high, normal,...)
 	status := strings.ToLower(batteryLevel)
-	if status == "full" {
-		status = "high" // icon full = icon high
-	}
-
 	tooltip := fmt.Sprintf("Battery Level: %s", batteryLevel)
 	if charging {
 		tooltip += " (Charging)"
